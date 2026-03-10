@@ -108,24 +108,6 @@ def markup_from_buttons(buttons: Iterable[types.InlineKeyboardButton]) -> types.
     return reply_markup
 
 
-def extend_reply_markup_with_counts(reactions_with_counts: list,
-                                    handler: str,
-                                    case_id: str) -> types.InlineKeyboardMarkup:
-    """
-    Build an InlineKeyboardMarkup with pre-set reaction counts.
-    reactions_with_counts: list of (emoji, count) tuples e.g. [('❤', 100), ('👍', 50)]
-    """
-    buttons_obj = []
-    for reaction, count in reactions_with_counts:
-        data = telegram_bot_utils.encode_button_data(handler=handler,
-                                                     case_id=case_id,
-                                                     response=reaction)
-        text = f'{reaction}{count}' if count > 0 else f'{reaction}'
-        btn = types.InlineKeyboardButton(text=text, callback_data=data)
-        buttons_obj.append(btn)
-    return markup_from_buttons(buttons_obj)
-
-
 def add_url_button_to_markup(reply_markup: types.InlineKeyboardMarkup,
                              text: str,
                              url: str):
