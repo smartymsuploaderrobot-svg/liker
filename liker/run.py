@@ -13,7 +13,7 @@ from tengi import App
 from liker.setup.dependencies import bind_app_dependencies
 from liker.setup.daemons import create_daemon_instances
 
-# ── Required to enable middleware in pyTelegramBotAPI ──
+# Required for middleware
 apihelper.ENABLE_MIDDLEWARE = True
 
 # Flask app for Render port binding
@@ -36,25 +36,30 @@ def main():
     from tengi import TelegramBot
     bot = inject.instance(TelegramBot).bot
 
-    # ── Fix 409: Drop pending updates so old instance conflicts are cleared ──
-    try:
-        bot.delete_webhook(drop_pending_updates=True)
-        time.sleep(2)
-    except Exception:
-        pass
+    # Fix 409: delete webhook and wait for old instance to die
+    for attempt in range(5):
+        try:
+            bot.delete_webhook(drop_pending_updates=True)
+            break
+        except Exception:
+            time.sleep(3)
+    time.sleep(5)  # extra wait for old instance to fully stop
 
-    # ── Fix em dash: Telegram auto-converts "--" to "—" ──
+    # Fix em dash: Telegram converts "--" to "—"
     @bot.middleware_handler(update_types=['message'])
     def fix_em_dash(bot_instance, message):
         if message.text:
-            message.text = message.text.replace('\u2014', '--').replace('\u2013', '--')
+            message.text = message.text \
+                .replace('\u2014', '--') \
+                .replace('\u2013', '--') \
+                .replace('\u2012', '--')
 
-    # Flask ko background thread mein start karo
+    # Flask in background thread
     flask_thread = Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
 
-    # Bot ko main thread mein run karo
+    # Bot in main thread
     app = inject.instance(App)
     app.run()
 
