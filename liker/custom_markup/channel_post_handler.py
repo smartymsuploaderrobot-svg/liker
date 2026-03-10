@@ -43,19 +43,6 @@ class ChannelPostHandler(TelegramInboxHandler):
 
         channel_dict = self.enabled_channels.get_channel_dict(str_channel_id)
         enabled_reactions = channel_dict['reactions']
-
-        # ── Native Reactions mode ──
-        use_native = self.config.get('use_native_reactions', False)
-        if use_native:
-            self.enabling_manager.seed_native_reactions(
-                channel_id=channel_id,
-                message_id=message_id,
-                reactions=enabled_reactions
-            )
-            logger.info(f'Seeded native reactions for {channel_id}, message {message_id}')
-            return True
-
-        # ── Inline Button Reactions mode (default) ──
         reply_markup = markup_utils.extend_reply_markup(current_markup=None,
                                                         enabled_reactions=enabled_reactions,
                                                         handler=constants.CHANNEL_POST_HANDLER,
