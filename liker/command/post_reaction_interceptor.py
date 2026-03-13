@@ -104,26 +104,28 @@ class PostReactionInterceptor(TelegramInboxHandler):
                 return True
 
             bot_token = self.config['bot_token']
-            success, result_msg = send_reactions_to_post(
+
+            self.telegram_bot.bot.send_message(
+                message.chat.id,
+                f'Sending reactions to {post_link}... please wait.'
+            )
+
+            results = send_reactions_to_post(
                 bot_token=bot_token,
                 chat_id=chat_id,
                 message_id=message_id,
                 reactions_list=reactions_parsed
             )
 
-            if success:
-                reactions_summary = ', '.join(
-                    [f'{emoji}{count}' for emoji, count in reactions_parsed]
-                )
-                self.telegram_bot.bot.send_message(
-                    message.chat.id,
-                    f'Reactions {reactions_summary} sent to post {post_link}'
-                )
-            else:
-                self.telegram_bot.bot.send_message(
-                    message.chat.id,
-                    f'Failed to send reactions: {result_msg}'
-                )
+            summary_parts = []
+            for emoji, requested, succeeded in results:
+                summary_parts.append(f'{emoji}{succeeded}/{requested}')
+            reactions_summary = ', '.join(summary_parts)
+
+            self.telegram_bot.bot.send_message(
+                message.chat.id,
+                f'Reactions sent to {post_link}: {reactions_summary}'
+            )
 
             return True
 
