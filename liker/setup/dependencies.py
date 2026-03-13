@@ -14,6 +14,7 @@ from liker.enabling_manager import EnablingManager
 from liker.command.handler_update_markup import CommandHandlerUpdateMarkup
 from liker.command.handler_take_message import CommandHandlerTakeMessage
 from liker.command.handler_post_reaction import CommandHandlerPostReaction
+from liker.command.post_reaction_interceptor import PostReactionInterceptor
 
 
 def bind_app_dependencies(binder: Binder):
@@ -61,7 +62,8 @@ def bind_app_dependencies(binder: Binder):
                                                       chat_types=constants.MESSAGES_LOG_CHAT_TYPES))
     binder.bind_to_constructor(TelegramInboxHub,
                                lambda: TelegramInboxHub(telegram_cursor=inject.instance(TelegramCursor),
-                                                        chain_handlers=[inject.instance(CommandHub),
+                                                        chain_handlers=[inject.instance(PostReactionInterceptor),
+                                                                        inject.instance(CommandHub),
                                                                         inject.instance(ChannelPostHandler),
                                                                         inject.instance(CommentHandler)]))
     binder.bind_to_constructor(ChatIdPreserver,
@@ -78,3 +80,4 @@ def bind_app_dependencies(binder: Binder):
                                                                   period_seconds=constants.ABUSE_JANITOR_SECONDS))
     binder.bind_to_constructor(EnablingManager, lambda: EnablingManager())
     binder.bind_to_constructor(CommandHandlerPostReaction, lambda: CommandHandlerPostReaction())
+    binder.bind_to_constructor(PostReactionInterceptor, lambda: PostReactionInterceptor())
