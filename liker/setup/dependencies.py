@@ -13,6 +13,7 @@ from liker.command.handler_set_reactions import CommandHandlerSetReactions
 from liker.enabling_manager import EnablingManager
 from liker.command.handler_update_markup import CommandHandlerUpdateMarkup
 from liker.command.handler_take_message import CommandHandlerTakeMessage
+from liker.command.handler_post_reaction import CommandHandlerPostReaction
 
 
 def bind_app_dependencies(binder: Binder):
@@ -76,3 +77,4 @@ def bind_app_dependencies(binder: Binder):
     binder.bind_to_constructor(AbuseJanitor, lambda: AbuseJanitor(abuse_detector=inject.instance(AbuseDetector),
                                                                   period_seconds=constants.ABUSE_JANITOR_SECONDS))
     binder.bind_to_constructor(EnablingManager, lambda: EnablingManager())
+    binder.bind_to_constructor(CommandHandlerPostReaction, lambda: CommandHandlerPostReaction())
