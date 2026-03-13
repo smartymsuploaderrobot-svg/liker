@@ -1,7 +1,7 @@
 import os
 import json
 
-START_MSG = """👋 Welcome to Auto Unlimited Reactions Bot!
+START_MSG = """👋 Welcome Dear to Auto Unlimited Reactions Bot!
 
 This bot adds reactions to your Telegram channel posts automatically.
 
