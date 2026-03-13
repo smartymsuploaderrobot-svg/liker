@@ -17,25 +17,31 @@ Made By: @SmartBoy_ApnaMS"""
 HELP_MSG = """📖 BOT COMMANDS & GUIDE
 
 ━━━━━━━━━━━━━━━━━━━
-1️⃣ SET REACTION ON A SPECIFIC POST:
+1️⃣ SET BUTTON REACTIONS FOR ALL NEW POSTS:
 
-/set_reactions — channel_id: -100XXXXXXXXX — post_link: https://t.me/yourchannel/19 — reactions: ❤ 100
+/set_reactions --channel_id -100XXXXXXXXX --reactions 😍97 😂50 😘
 
-👆 This will add ❤ with count 100 on that post.
+👆 Every new post in your channel will auto-get these button reactions.
 
 ━━━━━━━━━━━━━━━━━━━
-2️⃣ SET DEFAULT REACTION FOR ALL FUTURE POSTS:
+2️⃣ SET REAL REACTIONS ON A SPECIFIC POST:
 
-/set_reactions — channel_id: -100XXXXXXXXX — reactions: ❤ 50
+For public channel:
+/set_reactions --channel_username yourchannel --post_link https://t.me/yourchannel/19 --reactions ❤100 👍50
 
-👆 Every new post in your channel will auto-get ❤ reaction.
+For private channel:
+/set_reactions --channel_username 1234567890 --post_link https://t.me/c/1234567890/17 --reactions ❤100 👍50
+
+👆 This will add real reactions on that specific post.
 
 ━━━━━━━━━━━━━━━━━━━
 📌 HOW TO USE:
-• Replace -100XXXXXXXXX with your Channel ID
+• For public channel: use channel username without @
+• For private channel: use channel id (numbers only)
 • Replace the post link with your actual post link
-• Replace ❤ with any emoji you want
-• Replace 100 with how many reactions you want
+• Replace emojis with any reaction emoji you want
+• Add count after emoji for number of reactions (e.g. ❤100)
+• Reactions are unlimited
 
 ━━━━━━━━━━━━━━━━━━━
 💡 HOW TO GET CHANNEL ID:
