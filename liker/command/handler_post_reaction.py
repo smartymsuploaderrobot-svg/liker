@@ -1,4 +1,5 @@
 import re
+import time
 import inject
 import logging
 import requests
@@ -6,6 +7,9 @@ from tengi.command.command_handler import *
 from tengi import Config, TelegramBot
 
 logger = logging.getLogger(__file__)
+
+MAX_REACTIONS_PER_EMOJI = 50
+REACTION_DELAY_SECONDS = 0.5
 
 
 def parse_reaction_with_count(reaction_str):
@@ -52,8 +56,40 @@ def resolve_chat_id(channel_username):
         return f'@{clean}'
 
 
+def _api_set_reaction(url, chat_id, message_id, reaction_objects, is_big=False):
+    """Single API call to set reactions."""
+    payload = {
+        "chat_id": chat_id,
+        "message_id": message_id,
+        "reaction": reaction_objects,
+        "is_big": is_big
+    }
+    try:
+        response = requests.post(url, json=payload, timeout=30)
+        return response.json()
+    except requests.RequestException as ex:
+        return {"ok": False, "description": str(ex)}
+
+
+def _api_clear_reaction(url, chat_id, message_id):
+    """Clear all reactions from the bot on a message."""
+    payload = {
+        "chat_id": chat_id,
+        "message_id": message_id,
+        "reaction": []
+    }
+    try:
+        response = requests.post(url, json=payload, timeout=30)
+        return response.json()
+    except requests.RequestException:
+        return {"ok": False}
+
+
 def send_reactions_to_post(bot_token, chat_id, message_id, reactions_list):
     """Send real Telegram reactions to a specific post using Bot API.
+
+    For each emoji, loops count times (max 50) with rate limiting.
+    Each iteration: clears the bot's reaction then re-adds it.
 
     Args:
         bot_token: The bot's API token
@@ -62,35 +98,49 @@ def send_reactions_to_post(bot_token, chat_id, message_id, reactions_list):
         reactions_list: List of (emoji, count) tuples
 
     Returns:
-        (success, message) tuple
+        List of (emoji, requested_count, success_count) tuples
     """
     url = f"https://api.telegram.org/bot{bot_token}/setMessageReaction"
 
-    reaction_objects = []
+    results = []
     for emoji, count in reactions_list:
-        reaction_objects.append({
-            "type": "emoji",
-            "emoji": emoji
-        })
+        count = min(count, MAX_REACTIONS_PER_EMOJI)
+        success_count = 0
 
-    payload = {
-        "chat_id": chat_id,
-        "message_id": message_id,
-        "reaction": reaction_objects,
-        "is_big": True
-    }
+        for i in range(count):
+            if i > 0:
+                _api_clear_reaction(url, chat_id, message_id)
+                time.sleep(REACTION_DELAY_SECONDS)
 
-    try:
-        response = requests.post(url, json=payload, timeout=30)
-        result = response.json()
+            reaction_objects = [{"type": "emoji", "emoji": emoji}]
+            is_big = (i == 0)
+            result = _api_set_reaction(url, chat_id, message_id,
+                                       reaction_objects, is_big)
 
-        if result.get('ok'):
-            return True, "Reactions sent successfully"
-        else:
-            error_desc = result.get('description', 'Unknown error')
-            return False, f"Telegram API error: {error_desc}"
-    except requests.RequestException as ex:
-        return False, f"Request failed: {str(ex)}"
+            if result.get('ok'):
+                success_count += 1
+            else:
+                error_desc = result.get('description', '')
+                if 'Too Many Requests' in error_desc:
+                    logger.warning(f'Rate limited, waiting 5s: {error_desc}')
+                    time.sleep(5)
+                    result = _api_set_reaction(url, chat_id, message_id,
+                                               reaction_objects, is_big)
+                    if result.get('ok'):
+                        success_count += 1
+                    else:
+                        logger.error(f'Failed after retry: {error_desc}')
+                        break
+                else:
+                    logger.error(f'Reaction failed: {error_desc}')
+                    break
+
+            if i < count - 1:
+                time.sleep(REACTION_DELAY_SECONDS)
+
+        results.append((emoji, count, success_count))
+
+    return results
 
 
 class CommandHandlerPostReaction(CommandHandler):
@@ -136,21 +186,19 @@ class CommandHandlerPostReaction(CommandHandler):
 
         bot_token = self.config['bot_token']
 
-        success, message = send_reactions_to_post(
+        results = send_reactions_to_post(
             bot_token=bot_token,
             chat_id=chat_id,
             message_id=message_id,
             reactions_list=reactions_parsed
         )
 
-        if success:
-            reactions_summary = ', '.join(
-                [f'{emoji}{count}' for emoji, count in reactions_parsed]
-            )
-            context.reply(
-                f'Reactions {reactions_summary} sent to post {post_link}',
-                log_level=logging.INFO
-            )
-        else:
-            context.reply(f'Failed to send reactions: {message}',
-                          log_level=logging.INFO)
+        summary_parts = []
+        for emoji, requested, succeeded in results:
+            summary_parts.append(f'{emoji}{succeeded}/{requested}')
+        reactions_summary = ', '.join(summary_parts)
+
+        context.reply(
+            f'Reactions sent to {post_link}: {reactions_summary}',
+            log_level=logging.INFO
+        )
